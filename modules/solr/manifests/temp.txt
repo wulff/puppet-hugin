@@ -1,0 +1,67 @@
+exec { 'hugin-solr-download':
+  cwd     => '/root',
+  command => 'wget http://mirrors.rackhosting.com/apache/lucene/solr/3.6.1/apache-solr-3.6.1.tgz && tar xzf apache-solr-3.6.1.tgz',
+  creates => '/root/apache-solr-3.6.1',
+}
+
+file { ['/var/lib/tomcat6/webapps/solr', '/var/lib/tomcat6/webapps/solr/psyke.org', '/var/lib/tomcat6/webapps/solr/ratatosk.net']:
+  ensure => directory,
+  owner  => 'tomcat6',
+  group  => 'tomcat6',
+}
+
+file { '/var/lib/tomcat6/webapps/solr/psyke.org/schema.xml':
+  source  => 'puppet:///modules/solr/schema.xml',
+  owner   => 'tomcat6',
+  group   => 'tomcat6',
+  require => File['/var/lib/tomcat6/webapps/solr/psyke.org'],
+  notify  => Service['tomcat6'],
+}
+file { '/var/lib/tomcat6/webapps/solr/psyke.org/solrconfig.xml':
+  source  => 'puppet:///modules/solr/solrconfig.xml',
+  owner   => 'tomcat6',
+  group   => 'tomcat6',
+  require => File['/var/lib/tomcat6/webapps/solr/psyke.org'],
+  notify  => Service['tomcat6'],
+}
+
+file { '/var/lib/tomcat6/webapps/solr/ratatosk.net/schema.xml':
+  source  => 'puppet:///modules/solr/schema.xml',
+  owner   => 'tomcat6',
+  group   => 'tomcat6',
+  require => File['/var/lib/tomcat6/webapps/solr/ratatosk.net'],
+  notify  => Service['tomcat6'],
+}
+file { '/var/lib/tomcat6/webapps/solr/ratatosk.net/solrconfig.xml':
+  source  => 'puppet:///modules/solr/solrconfig.xml',
+  owner   => 'tomcat6',
+  group   => 'tomcat6',
+  require => File['/var/lib/tomcat6/webapps/solr/ratatosk.net'],
+  notify  => Service['tomcat6'],
+}
+
+exec { 'hugin-solr-basic-config':
+  command => 'cp -r /root/apache-solr-3.6.1/example/solr /var/lib/tomcat6/webapps',
+  require => [Exec['hugin-solr-download'], File['/var/lib/tomcat6/webapps/solr']],
+}
+
+file { '/var/lib/tomcat6/webapps/solr/solr.xml':
+  source  => 'puppet:///modules/solr/solr-multicore.xml',
+  owner   => 'tomcat6',
+  group   => 'tomcat6',
+  require => Exec['hugin-solr-basic-config'],
+}
+
+file { '/etc/tomcat6/Catalina/localhost/solr.xml':
+  source  => 'puppet:///modules/solr/solr-catalina.xml',
+  owner   => 'tomcat6',
+  group   => 'tomcat6',
+  require => Package['tomcat6'],
+  notify  => Service['tomcat6'],
+}
+
+file { '/var/lib/tomcat6/webapps/solr.war':
+  source  => '/root/apache-solr-3.6.1/dist/apache-solr-3.6.1.war',
+  require => [Package['tomcat6'], Exec['hugin-solr-basic-config']],
+  notify  => Service['tomcat6'],
+}
